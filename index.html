@@ -1,0 +1,373 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" x-undefined="" />
+<title> Splash Graphic </title>
+<link rel = "stylesheet" type = "text/css" href = "green.analytics.css?v=1.1" />
+<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+
+</head>
+
+
+
+<style>
+
+path {
+  fill: none;
+  stroke: white;
+  stroke-width: 1px;
+}
+
+.axis_labels, text {
+	fill:white;
+}
+
+.axis_labels line, path {
+	stroke:white;
+}
+
+
+</style>
+
+<body>
+
+<div class=figure_div id=lasso_figure></div>
+
+
+</body>
+
+
+
+
+<script>
+
+
+
+function transition(object,path) {
+
+	var features_removed = 0 
+
+	path = d3.select("#" + path)
+
+	d3.selectAll("#" + object)
+  	  .transition()	
+      .duration(15000)
+      .attrTween("transform", translateAlong(path.node() ))
+
+	if (object == "lambda_container"){
+
+ 		var format = d3.format(",d");
+
+    	d3.selectAll("#lambda_text")
+    	.transition()
+    	.duration(15000)
+    	.on("start", function repeat() {
+      	d3.active(this)
+		.tween("text", function() {
+        var that = d3.select(this),
+        i = d3.interpolateNumber(0,400);
+        return function(t) { that.text( format(i(t)) ); };
+          })
+
+
+	})
+}
+}
+// Returns an attrTween for translating along the specified path element.
+function translateAlong(path) {
+  var l = path.getTotalLength();  	
+
+  return function(d, i, a) {
+  	var node = this
+    return function(t) {
+      var p = path.getPointAtLength(t * l);
+
+      //remove a features (circle) when it reaches the middle (coef value of zero) of the plot
+      if ( (p.y == lasso_size.height/2 - 10) && (node.getAttribute("opacity") != 0) && (features_removed < total_features -1) ){ 
+      	features_removed = features_removed + 1
+      	node.setAttribute("opacity", .0)
+ 	
+      }
+
+      return "translate(" + p.x + "," + p.y + ")";
+    };
+  };
+}
+
+
+// Returns an attrTween for translating along the specified path element.
+function display_x_coord(path) {
+
+    return function(t) {
+      var p = path.getPointAtLength(t * l);
+      console.log("Hello")
+      return p.x
+    };
+
+}
+
+
+function generate_path(drag_parameter) {
+
+		points = [];
+
+		var drop_point = amount_of_points
+		var drop_point_flag = 0
+		var x_coordinate = lasso_window.left	
+		var x_coord_increment = (lasso_size.width - lasso_window.right - lasso_window.left - 185)/amount_of_points
+		var drag = 0
+		var drop_point = amount_of_points
+
+		//Determine if the path goes up or down (+|- coefficient)
+		//flip a coin
+		if (Math.random() < .5) {
+
+			var y_coordinate = lasso_window.top
+
+ 			for (index = 0; index < amount_of_points; index++){
+
+				drag =  Math.random() - drag_parameter  
+
+				if (drag < 0) { drag = 0} else {drag = drag};
+
+				y_coordinate = y_coordinate + (y_coordinate	* drag)	
+				x_coordinate = x_coordinate + x_coord_increment
+
+				if (y_coordinate > lasso_size.height/2 - 10) {
+					y_coordinate = lasso_size.height/2 - 10
+					
+					if (drop_point_flag == 0) {
+						drop_point = index
+						drop_point_flag = 1
+					} else {
+						drop_point = drop_point
+					}
+				}
+				points.push([x_coordinate,y_coordinate,drop_point])
+			}
+
+		} else {
+
+			var y_coordinate = lasso_size.height - lasso_window.bottom
+
+ 			for (index = 0; index < amount_of_points; index++){
+
+				drag =  Math.random() - drag_parameter  
+
+				if (drag < 0) { drag = 0} else {drag = drag};
+
+				y_coordinate = y_coordinate - (y_coordinate	* drag/2.5)	
+				x_coordinate = x_coordinate + x_coord_increment
+
+				if (y_coordinate < (lasso_size.height/2 - 10)) {
+					y_coordinate = (lasso_size.height/2 - 10)
+					
+					if (drop_point_flag == 0) {
+						drop_point = index
+						drop_point_flag = 1
+					} else {
+						drop_point = drop_point
+					}
+				}
+
+				points.push([x_coordinate,y_coordinate,drop_point])
+			}
+		}
+
+	return points;		
+
+}
+
+function assign_letter()
+{
+    var text = "";
+    var possible = "ABCDEFHIJKLMNOPQRSTUVWXYZ";
+
+    for( var i=0; i < 1; i++ )
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+    return text;
+}
+
+
+
+var features_removed = 0
+lasso_size = {height:200, width:600}
+lasso_window = {top:20, bottom:40, right:50, left:50}
+
+var svg = d3.select("#lasso_figure").append("svg")
+    .attr("width", lasso_size.width)
+    .attr("height", lasso_size.height);
+
+   	svg.append("rect")
+   	.attr("width", lasso_size.width)
+   	.attr("height", lasso_size.height)
+   	.attr('fill','rgb(255,255,255)')
+	.attr('opacity','0.25')
+
+	path_container = svg.append("g")
+	.attr("id", "path_container")
+
+	//create a box for the scat points
+	svg.append('rect')
+	.attr('height',175)
+	.attr('width',175)		
+	.attr("transform", "translate(" + lasso_size.width*.69 + "," + lasso_size.height*.06 + ")")
+	.attr('fill','rgb(0,25,75)')
+	.attr('fill-opacity','0.75')
+	.style('stroke','white')
+	.style('stroke-width',2)
+
+	//create x scale
+	xScale = d3.scaleLinear()
+	.domain([0,400])
+	.range([0,315])
+
+	xAxis = d3.axisBottom(xScale)
+
+	svg.append("g")
+	.attr('class','axis_labels')
+	.attr('transform',"translate(" + lasso_window.left + "," + (lasso_size.height - lasso_window.bottom +5) + ")")
+	.call(xAxis)
+
+   svg.append("text")
+	.text("Lambda")
+    .attr("fill", "white")
+    .attr("font-size",14)
+    .attr("x",185)
+    .attr("y",195)
+
+	//create y scale
+	yScale = d3.scaleLinear()
+	.domain([-5,5])
+	.range([lasso_window.top,lasso_size.height - lasso_window.bottom])
+
+	svg.append("g")
+	.attr('class','axis_labels')
+	.attr('transform',"translate(" + (lasso_window.left -10)  + "," + 0 + ")")
+	.call(d3.axisLeft(yScale).ticks(5))
+  
+     svg.append("text")
+	.text("Coefficient")
+    .attr("fill", "white")
+    .attr("font-size",14)
+    .attr("x",0)
+    .attr("y",0)
+ 	.attr("transform", "translate(18,127), rotate(270)")
+
+	circle_container = svg.append("g")
+	.attr("id", "circles_container")
+
+    // define the line
+	var valueline = d3.line()
+    .x(function(d) { return d[0]; })
+    .y(function(d) { return d[1]; })
+    .curve(d3.curveLinear);
+
+
+var element_count = 0 
+var features = 5
+var start_drag_parameter = 6
+var finish_drag_parameter = 8
+var amount_of_points = 70
+var drop_points = [] 
+
+var longest_path = 0
+var longest_index =0
+
+var total_features = features * (finish_drag_parameter-start_drag_parameter) 
+
+for (feature = 0; feature<features; feature++) {
+	for (drag_parameter = start_drag_parameter; drag_parameter < finish_drag_parameter; drag_parameter++){
+		
+	coordinates = generate_path(drag_parameter/10)
+
+	if (longest_path < coordinates[amount_of_points-1][2]) { longest_path = coordinates[amount_of_points-1][2]; longest_index = element_count }
+
+	circle = "circle_"
+	circle = circle.concat(element_count)
+
+	path = "path_"
+	path = path.concat(element_count)
+
+	text = "text_"
+	text = text.concat(element_count)
+
+	circle_object = "circle_object_"
+	circle_object = circle_object.concat(element_count)
+
+	svg.append("g")
+	.attr("id",circle_object)
+	.attr("transform", "translate(" + coordinates[0][0] +"," + coordinates[1][0]+ ")");
+
+	d3.select("#" + circle_object)
+	.append("circle")
+  	.attr("id", circle)
+  	.attr("fill","rgb(170,190,150")
+   	.attr("fill-opacity",.75)
+   	.attr("stroke","white")
+   	.attr("stroke-width",2)
+    .attr("r", 12)
+
+	d3.select("#" + circle_object)
+	.append("text")
+	.attr("class","circle_labels")
+  	.attr("id", text)
+    .text(assign_letter)
+    .attr("fill", "white")
+    .attr("font-size",14)
+    .attr("text-anchor", "middle")
+    .attr("alignment-baseline", "central")
+    .attr("x",0)
+    .attr("y",0)
+
+	path_container.append("path")
+	.data([coordinates])
+	.attr("d", valueline)
+	.attr("id",path);
+
+	transition(circle_object,path);
+
+	element_count = element_count + 1;
+
+	}
+}
+
+	// lambda_path_data = [ [ lasso_window.left, lasso_size.height - lasso_window.bottom + 5] , [325,lasso_size.height - lasso_window.bottom + 5] ]
+ 
+	// svg.append("path")
+	// .data( [lambda_path_data])
+	// .attr("d", valueline)
+	// .attr("id","lambda_path");
+
+	// transition("lambda_container","lambda_path")
+
+//Set the letter of the longest lasting feature to G
+d3.select("#" + "text_" + longest_index)
+	.text("G")
+	.transition()
+	.delay(13000)
+	.duration(4000)
+	.attr("font-size",200)
+	.attr("font-weight",700)
+	.attr("fill", "rgb(85,215,5")	
+
+d3.select("#" + "circle_" + longest_index)
+	.transition()
+	.delay(12000)
+	.duration(0)
+	.attr("fill-opacity",0)
+	.attr("stroke-opacity",0)
+
+
+d3.select("#" + "circle_object_" + longest_index)
+	.transition()
+	.delay(12000)
+	.duration(3000)
+	.attr("transform","translate(500," + lasso_size.height/2  + ")" )
+
+
+
+</script>
